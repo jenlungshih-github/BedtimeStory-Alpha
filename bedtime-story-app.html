@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文睡前故事生成器</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        
+        // Simple icon components using Unicode symbols
+        const Sparkles = () => React.createElement('span', null, '✨');
+        const Book = () => React.createElement('span', null, '📖');
+        const ArrowRight = ({ className }) => React.createElement('span', { className }, '→');
+        const ArrowLeft = ({ className }) => React.createElement('span', { className }, '←');
+        const Loader2 = ({ className }) => React.createElement('span', { className: className + ' inline-block animate-spin' }, '⟳');
+        const Heart = () => React.createElement('span', null, '❤️');
+        const Star = () => React.createElement('span', null, '⭐');
+        const Eye = () => React.createElement('span', null, '👁️');
+        const EyeOff = () => React.createElement('span', null, '🙈');
+
+        const ChineseBedtimeStoryGenerator = () => {
+            const [currentStep, setCurrentStep] = useState(0);
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [storyData, setStoryData] = useState(null);
+            const [showPinyin, setShowPinyin] = useState(true);
+            const [showZhuyin, setShowZhuyin] = useState(true);
+            const [formData, setFormData] = useState({
+                age: '',
+                gender: '',
+                interests: [],
+                length: '',
+                lesson: ''
+            });
+            const apiKey = 'AIzaSyCXHNhEOwcqK4Xf4zPFPIjpW2pf7L2xr0w';
+
+            const interests = [
+                '動物', '太空與星星', '海洋生物', '恐龍', '魔法幻想',
+                '運動', '音樂', '藝術繪畫', '自然森林', '超級英雄',
+                '交通工具', '烹飪美食', '科學實驗'
+            ];
+
+            const storyLengths = [
+                { value: 'short', label: '短篇故事', emoji: '📖', desc: '5-8句話，適合年幼兒童', chars: '50-100字' },
+                { value: 'medium', label: '中篇故事', emoji: '📚', desc: '10-15句話，適合學齡兒童', chars: '150-250字' },
+                { value: 'long', label: '長篇故事', emoji: '📜', desc: '20-30句話，適合較大兒童', chars: '300-500字' }
+            ];
+
+            const handleInterestToggle = (interest) => {
+                setFormData(prev => ({
+                    ...prev,
+                    interests: prev.interests.includes(interest)
+                        ? prev.interests.filter(i => i !== interest)
+                        : [...prev.interests, interest]
+                }));
+            };
+
+            const nextStep = () => {
+                setCurrentStep(currentStep + 1);
+            };
+
+            const prevStep = () => {
+                setCurrentStep(currentStep - 1);
+            };
+
+            const generateStory = async () => {
+                setIsGenerating(true);
+                setCurrentStep(5);
+
+                try {
+                    const lengthSpecs = {
+                        short: '5-8句話，大約50-100個中文字',
+                        medium: '10-15句話，大約150-250個中文字', 
+                        long: '20-30句話，大約300-500個中文字'
+                    };
+
+                    const prompt = `請為一個${formData.age}歲的${formData.gender}創作一個中文睡前故事，主題包含${formData.interests.join('、')}。
+
+故事要求：
+- 長度：${lengthSpecs[formData.length]}
+- 教導的品德：${formData.lesson}
+- 適合睡前閱讀（平靜的結局）
+- 語言適合兒童理解
+- 用詞簡單，句子不要太複雜
+
+請以JSON格式回覆，包含以下格式：
+{
+  "title": "故事標題",
+  "story": [
+    {
+      "chinese": "中文句子",
+      "hanyu_pinyin": "漢語拼音標註",
+      "zhuyin": "注音標註"
+    }
+  ]
+}
+
+注意：
+- 每個句子都要提供準確的漢語拼音和注音
+- 漢語拼音使用標準聲調符號
+- 注音使用正確的ㄅㄆㄇㄈ系統
+- 確保是有效的JSON格式
+- 不要包含任何其他文字，只要JSON
+
+DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON. DON'T INCLUDE LEADING BACKTICKS LIKE \`\`\`json.`;
+
+                    // API key is hardcoded, no need to check
+
+                    // Try direct API call first, then fallback to alternative methods
+                    let response;
+                    try {
+                        // Method 1: Direct API call with proper headers
+                        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{
+                                        text: prompt
+                                    }]
+                                }],
+                                generationConfig: {
+                                    temperature: 0.7,
+                                    topK: 40,
+                                    topP: 0.95,
+                                    maxOutputTokens: 2048,
+                                },
+                                safetySettings: [
+                                    {
+                                        category: "HARM_CATEGORY_HARASSMENT",
+                                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                    },
+                                    {
+                                        category: "HARM_CATEGORY_HATE_SPEECH",
+                                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                    },
+                                    {
+                                        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                    },
+                                    {
+                                        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                    }
+                                ]
+                            })
+                        });
+                    } catch (corsError) {
+                        console.log('Direct API call failed, trying alternative method:', corsError);
+                        // Method 2: Use a different CORS proxy
+                        try {
+                            response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`)}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    contents: [{
+                                        parts: [{
+                                            text: prompt
+                                        }]
+                                    }],
+                                    generationConfig: {
+                                        temperature: 0.7,
+                                        topK: 40,
+                                        topP: 0.95,
+                                        maxOutputTokens: 2048
+                                    }
+                                })
+                            });
+                        } catch (proxyError) {
+                             console.log('Proxy method also failed, trying local proxy:', proxyError);
+                             // Method 3: Use local proxy server (if running)
+                             try {
+                                 response = await fetch('http://localhost:3001/api/gemini', {
+                                     method: 'POST',
+                                     headers: {
+                                         'Content-Type': 'application/json'
+                                     },
+                                     body: JSON.stringify({
+                                         apiKey: apiKey,
+                                         contents: [{
+                                             parts: [{ text: prompt }]
+                                         }],
+                                         generationConfig: {
+                                             temperature: 0.7,
+                                             topK: 40,
+                                             topP: 0.95,
+                                             maxOutputTokens: 2048
+                                         },
+                                         safetySettings: [
+                                             {
+                                                 category: "HARM_CATEGORY_HARASSMENT",
+                                                 threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                             },
+                                             {
+                                                 category: "HARM_CATEGORY_HATE_SPEECH",
+                                                 threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                             },
+                                             {
+                                                 category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                                 threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                             },
+                                             {
+                                                 category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                                 threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                                             }
+                                         ]
+                                     })
+                                 });
+                             } catch (localProxyError) {
+                                 console.log('Local proxy also failed:', localProxyError);
+                                 throw new Error('所有API調用方法都失敗了。請檢查網路連接、API金鑰，或運行本地代理服務器。');
+                             }
+                         }
+                    }
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('API Error Response:', errorText);
+                        throw new Error(`API請求失敗 (${response.status}): ${errorText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('API Response:', data);
+                    
+                    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                        console.error('Invalid API response structure:', data);
+                        throw new Error('API返回的數據格式不正確');
+                    }
+                    
+                    const generatedText = data.candidates[0].content.parts[0].text;
+                    console.log('Generated text:', generatedText);
+                    
+                    // Clean up the response to extract JSON
+                    let cleanedText = generatedText.trim();
+                    if (cleanedText.startsWith('```json')) {
+                        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+                    }
+                    if (cleanedText.startsWith('```')) {
+                        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+                    }
+                    
+                    console.log('Cleaned text for parsing:', cleanedText);
+                    const parsedStory = JSON.parse(cleanedText);
+                    setStoryData(parsedStory);
+                    setCurrentStep(6);
+                } catch (error) {
+                    console.error('Error generating story:', error);
+                    let errorMessage = '抱歉，生成故事時出現錯誤。';
+                    
+                    if (error.message.includes('API請求失敗')) {
+                        errorMessage += '\n\n可能的原因：\n• API金鑰無效或已過期\n• 網路連接問題\n• API服務暫時不可用';
+                    } else if (error.message.includes('JSON')) {
+                        errorMessage += '\n\n故事內容解析失敗，請重試。';
+                    } else if (error.message.includes('API返回的數據格式不正確')) {
+                        errorMessage += '\n\nAPI返回了意外的響應格式。';
+                    } else if (error.message.includes('CORS') || error.message.includes('fetch')) {
+                        errorMessage += '\n\n這可能是CORS跨域問題。\n\n解決方案：\n• 使用Chrome瀏覽器並安裝CORS擴展\n• 或者在本地運行一個代理服務器\n• 或者使用支持CORS的瀏覽器設置';
+                    }
+                    
+                    errorMessage += '\n\n請檢查瀏覽器控制台以獲取詳細錯誤信息，然後重試。';
+                    
+                    alert(errorMessage);
+                    setCurrentStep(4);
+                } finally {
+                    setIsGenerating(false);
+                }
+            };
+
+            const resetForm = () => {
+                setCurrentStep(0);
+                setStoryData(null);
+                setIsGenerating(false);
+                setFormData({
+                    age: '',
+                    gender: '',
+                    interests: [],
+                    length: '',
+                    lesson: ''
+                });
+            };
+
+            const canProceed = () => {
+                switch (currentStep) {
+                    case 0: return formData.age !== '';
+                    case 1: return formData.gender !== '';
+                    case 2: return formData.interests.length > 0;
+                    case 3: return formData.length !== '';
+                    case 4: return formData.lesson.trim() !== '';
+                    default: return true;
+                }
+            };
+
+            const getStepTitle = () => {
+                const titles = [
+                    '您的孩子幾歲？',
+                    '告訴我們關於您的孩子',
+                    '您的孩子喜歡什麼？',
+                    '故事長度',
+                    '想要學習什麼品德？',
+                    '正在創作您的故事...',
+                    '您的中文睡前故事準備好了！'
+                ];
+                return titles[currentStep];
+            };
+
+            const getStepSubtitle = () => {
+                const subtitles = [
+                    '這幫助我們選擇適合的詞彙和主題',
+                    '我們會使用正確的稱謂和視角',
+                    '選擇1-3個激發想像力的主題',
+                    '選擇適合的故事長度',
+                    '故事中應該包含什麼重要訊息？',
+                    '我們的故事魔法正在運作...',
+                    '甜美的夢境就在一個故事之外！'
+                ];
+                return subtitles[currentStep];
+            };
+
+            // Step 0: Age
+            if (currentStep === 0) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border-2 border-red-200" },
+                        React.createElement('div', { className: "text-center mb-8" },
+                            React.createElement('div', { className: "flex justify-center mb-4" },
+                                React.createElement('div', { className: "text-4xl" }, '🏮')
+                            ),
+                            React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-2" }, getStepTitle()),
+                            React.createElement('p', { className: "text-gray-600" }, getStepSubtitle())
+                        ),
+                        React.createElement('div', { className: "space-y-6" },
+                            React.createElement('input', {
+                                type: "number",
+                                value: formData.age,
+                                onChange: (e) => setFormData({...formData, age: e.target.value}),
+                                placeholder: "輸入年齡 (2-12)",
+                                min: "2",
+                                max: "12",
+                                className: "w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:outline-none transition-colors text-2xl text-center font-bold",
+                                autoFocus: true
+                            }),
+                            React.createElement('button', {
+                                onClick: nextStep,
+                                disabled: !canProceed(),
+                                className: "w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-4 px-6 rounded-2xl font-bold text-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                            },
+                                '繼續',
+                                React.createElement(ArrowRight, { className: "w-5 h-5" })
+                            )
+                        ),
+                        React.createElement('div', { className: "mt-8 text-center" },
+                            React.createElement('div', { className: "text-sm text-gray-500" }, '步驟 1 / 6'),
+                            React.createElement('div', { className: "w-full bg-gray-200 rounded-full h-2 mt-2" },
+                                React.createElement('div', { className: "bg-red-500 h-2 rounded-full transition-all duration-300", style: {width: '16.67%'} })
+                            )
+                        )
+                    )
+                );
+            }
+
+            // Step 1: Gender
+            if (currentStep === 1) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border-2 border-red-200" },
+                        React.createElement('div', { className: "text-center mb-8" },
+                            React.createElement('div', { className: "flex justify-center mb-4" },
+                                React.createElement('div', { className: "text-4xl" }, '👶')
+                            ),
+                            React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-2" }, getStepTitle()),
+                            React.createElement('p', { className: "text-gray-600" }, getStepSubtitle())
+                        ),
+                        React.createElement('div', { className: "space-y-4" },
+                            [
+                                { value: '男孩', label: '男孩', emoji: '👦' },
+                                { value: '女孩', label: '女孩', emoji: '👧' },
+                                { value: '其他', label: '其他', emoji: '🧒' }
+                            ].map((gender) =>
+                                React.createElement('button', {
+                                    key: gender.value,
+                                    onClick: () => setFormData({...formData, gender: gender.value}),
+                                    className: `w-full py-4 px-6 rounded-2xl border-2 transition-all duration-200 text-center font-bold text-lg flex items-center justify-center gap-3 ${
+                                        formData.gender === gender.value
+                                            ? 'border-red-500 bg-red-50 text-red-700'
+                                            : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    }`
+                                },
+                                    React.createElement('span', { className: "text-2xl" }, gender.emoji),
+                                    gender.label
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-4 mt-8" },
+                            React.createElement('button', {
+                                onClick: prevStep,
+                                className: "flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-2xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                            },
+                                React.createElement(ArrowLeft, { className: "w-4 h-4" }),
+                                '返回'
+                            ),
+                            React.createElement('button', {
+                                onClick: nextStep,
+                                disabled: !canProceed(),
+                                className: "flex-2 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-3 px-6 rounded-2xl font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            },
+                                '繼續',
+                                React.createElement(ArrowRight, { className: "w-4 h-4" })
+                            )
+                        ),
+                        React.createElement('div', { className: "mt-8 text-center" },
+                            React.createElement('div', { className: "text-sm text-gray-500" }, '步驟 2 / 6'),
+                            React.createElement('div', { className: "w-full bg-gray-200 rounded-full h-2 mt-2" },
+                                React.createElement('div', { className: "bg-red-500 h-2 rounded-full transition-all duration-300", style: {width: '33.33%'} })
+                            )
+                        )
+                    )
+                );
+            }
+
+            // Step 2: Interests
+            if (currentStep === 2) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full border-2 border-red-200" },
+                        React.createElement('div', { className: "text-center mb-8" },
+                            React.createElement('div', { className: "flex justify-center mb-4" },
+                                React.createElement('div', { className: "text-4xl" }, '⭐')
+                            ),
+                            React.createElement('h1', { className: "text-2xl lg:text-3xl font-bold text-gray-800 mb-2" }, getStepTitle()),
+                            React.createElement('p', { className: "text-gray-600" }, getStepSubtitle())
+                        ),
+                        React.createElement('div', { className: "grid grid-cols-2 gap-3 mb-8" },
+                            interests.map((interest) =>
+                                React.createElement('button', {
+                                    key: interest,
+                                    onClick: () => handleInterestToggle(interest),
+                                    className: `py-3 px-4 rounded-xl border-2 transition-all duration-200 text-center font-medium text-sm ${
+                                        formData.interests.includes(interest)
+                                            ? 'border-red-500 bg-red-50 text-red-700'
+                                            : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    }`
+                                },
+                                    interest
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-4" },
+                            React.createElement('button', {
+                                onClick: prevStep,
+                                className: "flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-2xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                            },
+                                React.createElement(ArrowLeft, { className: "w-4 h-4" }),
+                                '返回'
+                            ),
+                            React.createElement('button', {
+                                onClick: nextStep,
+                                disabled: !canProceed(),
+                                className: "flex-2 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-3 px-6 rounded-2xl font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            },
+                                '繼續',
+                                React.createElement(ArrowRight, { className: "w-4 h-4" })
+                            )
+                        ),
+                        React.createElement('div', { className: "mt-8 text-center" },
+                            React.createElement('div', { className: "text-sm text-gray-500" }, '步驟 3 / 6'),
+                            React.createElement('div', { className: "w-full bg-gray-200 rounded-full h-2 mt-2" },
+                                React.createElement('div', { className: "bg-red-500 h-2 rounded-full transition-all duration-300", style: {width: '50%'} })
+                            )
+                        )
+                    )
+                );
+            }
+
+            // Step 3: Story Length
+            if (currentStep === 3) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border-2 border-red-200" },
+                        React.createElement('div', { className: "text-center mb-8" },
+                            React.createElement('div', { className: "flex justify-center mb-4" },
+                                React.createElement('div', { className: "text-4xl" }, '📚')
+                            ),
+                            React.createElement('h1', { className: "text-2xl lg:text-3xl font-bold text-gray-800 mb-2" }, getStepTitle()),
+                            React.createElement('p', { className: "text-gray-600" }, getStepSubtitle())
+                        ),
+                        React.createElement('div', { className: "space-y-3 mb-8" },
+                            storyLengths.map((length) =>
+                                React.createElement('button', {
+                                    key: length.value,
+                                    onClick: () => setFormData({...formData, length: length.value}),
+                                    className: `w-full py-4 px-6 rounded-2xl border-2 transition-all duration-200 text-left font-medium flex items-center gap-4 ${
+                                        formData.length === length.value
+                                            ? 'border-red-500 bg-red-50 text-red-700'
+                                            : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    }`
+                                },
+                                    React.createElement('span', { className: "text-3xl" }, length.emoji),
+                                    React.createElement('div', { className: "flex-1" },
+                                        React.createElement('div', { className: "font-bold text-lg" }, length.label),
+                                        React.createElement('div', { className: "text-sm opacity-70" }, length.desc),
+                                        React.createElement('div', { className: "text-xs opacity-50 mt-1" }, length.chars)
+                                    )
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-4" },
+                            React.createElement('button', {
+                                onClick: prevStep,
+                                className: "flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-2xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                            },
+                                React.createElement(ArrowLeft, { className: "w-4 h-4" }),
+                                '返回'
+                            ),
+                            React.createElement('button', {
+                                onClick: nextStep,
+                                disabled: !canProceed(),
+                                className: "flex-2 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-3 px-6 rounded-2xl font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            },
+                                '繼續',
+                                React.createElement(ArrowRight, { className: "w-4 h-4" })
+                            )
+                        ),
+                        React.createElement('div', { className: "mt-8 text-center" },
+                            React.createElement('div', { className: "text-sm text-gray-500" }, '步驟 4 / 6'),
+                            React.createElement('div', { className: "w-full bg-gray-200 rounded-full h-2 mt-2" },
+                                React.createElement('div', { className: "bg-red-500 h-2 rounded-full transition-all duration-300", style: {width: '66.67%'} })
+                            )
+                        )
+                    )
+                );
+            }
+
+            // Step 4: Lesson
+            if (currentStep === 4) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border-2 border-red-200" },
+                        React.createElement('div', { className: "text-center mb-8" },
+                            React.createElement('div', { className: "flex justify-center mb-4" },
+                                React.createElement('div', { className: "text-4xl" }, '💝')
+                            ),
+                            React.createElement('h1', { className: "text-2xl lg:text-3xl font-bold text-gray-800 mb-2" }, getStepTitle()),
+                            React.createElement('p', { className: "text-gray-600" }, getStepSubtitle())
+                        ),
+                        React.createElement('div', { className: "space-y-6" },
+                            React.createElement('textarea', {
+                                value: formData.lesson,
+                                onChange: (e) => setFormData({...formData, lesson: e.target.value}),
+                                placeholder: "例如：對他人友善、嘗試新事物、分享的重要性、面對恐懼要勇敢...",
+                                className: "w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:outline-none transition-colors resize-none h-32 text-lg",
+                                autoFocus: true
+                            }),
+                            React.createElement('div', { className: "flex gap-4" },
+                                React.createElement('button', {
+                                    onClick: prevStep,
+                                    className: "flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-2xl font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                                },
+                                    React.createElement(ArrowLeft, { className: "w-4 h-4" }),
+                                    '返回'
+                                ),
+                                React.createElement('button', {
+                                    onClick: generateStory,
+                                    disabled: !canProceed(),
+                                    className: "flex-2 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-3 px-6 rounded-2xl font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                },
+                                    '創作故事',
+                                    React.createElement(Sparkles, { className: "w-4 h-4" })
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: "mt-8 text-center" },
+                            React.createElement('div', { className: "text-sm text-gray-500" }, '步驟 5 / 6'),
+                            React.createElement('div', { className: "w-full bg-gray-200 rounded-full h-2 mt-2" },
+                                React.createElement('div', { className: "bg-red-500 h-2 rounded-full transition-all duration-300", style: {width: '83.33%'} })
+                            )
+                        )
+                    )
+                );
+            }
+
+            // Step 5: Loading
+            if (currentStep === 5) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border-2 border-red-200" },
+                        React.createElement('div', { className: "animate-pulse mb-6" },
+                            React.createElement('div', { className: "text-6xl" }, '🏮')
+                        ),
+                        React.createElement('h2', { className: "text-3xl font-bold text-gray-800 mb-4" }, getStepTitle()),
+                        React.createElement('p', { className: "text-gray-600 mb-6" }, getStepSubtitle()),
+                        React.createElement('div', { className: "flex justify-center" },
+                            React.createElement(Loader2, { className: "w-8 h-8 text-red-500 animate-spin" })
+                        )
+                    )
+                );
+            }
+
+            // Step 6: Story Display
+            if (currentStep === 6) {
+                return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100 p-4" },
+                    React.createElement('div', { className: "max-w-4xl mx-auto" },
+                        React.createElement('div', { className: "bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-red-200" },
+                            React.createElement('div', { className: "bg-gradient-to-r from-red-500 to-orange-600 p-6" },
+                                React.createElement('div', { className: "text-center" },
+                                    React.createElement('h1', { className: "text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3" },
+                                        React.createElement(Book, { className: "w-8 h-8" }),
+                                        storyData?.title || getStepTitle()
+                                    ),
+                                    React.createElement('p', { className: "text-red-100" }, getStepSubtitle())
+                                )
+                            ),
+                            React.createElement('div', { className: "p-8" },
+                                React.createElement('div', { className: "flex justify-center gap-4 mb-6" },
+                                    React.createElement('button', {
+                                        onClick: () => setShowPinyin(!showPinyin),
+                                        className: `px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                                            showPinyin 
+                                                ? 'bg-blue-500 text-white' 
+                                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                        }`
+                                    },
+                                        showPinyin ? React.createElement(Eye, { className: "w-4 h-4" }) : React.createElement(EyeOff, { className: "w-4 h-4" }),
+                                        '拼音 (Hanyu Pinyin)'
+                                    ),
+                                    React.createElement('button', {
+                                        onClick: () => setShowZhuyin(!showZhuyin),
+                                        className: `px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                                            showZhuyin 
+                                                ? 'bg-green-500 text-white' 
+                                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                        }`
+                                    },
+                                        showZhuyin ? React.createElement(Eye, { className: "w-4 h-4" }) : React.createElement(EyeOff, { className: "w-4 h-4" }),
+                                        '注音 (Zhuyin)'
+                                    )
+                                ),
+                                React.createElement('div', { className: "bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 border-l-4 border-orange-300 mb-8" },
+                                    React.createElement('div', { className: "space-y-6" },
+                                        storyData?.story?.map((sentence, index) =>
+                                            React.createElement('div', { key: index, className: "bg-white rounded-lg p-4 shadow-sm" },
+                                                React.createElement('div', { className: "text-2xl font-bold text-gray-800 mb-2 leading-relaxed" },
+                                                    sentence.chinese
+                                                ),
+                                                showPinyin && React.createElement('div', { className: "text-blue-600 font-medium mb-1 text-lg" },
+                                    '📝 ', sentence.hanyu_pinyin
+                                ),
+                                                showZhuyin && React.createElement('div', { className: "text-green-600 font-medium text-lg" },
+                                                    '🔤 ', sentence.zhuyin
+                                                )
+                                            )
+                                        ) || React.createElement('div', { className: "text-center text-gray-500 py-8" },
+                                            React.createElement(Loader2, { className: "w-6 h-6 animate-spin mx-auto mb-2" }),
+                                            '故事載入中...'
+                                        )
+                                    )
+                                ),
+                                React.createElement('div', { className: "flex flex-col gap-4" },
+                                    React.createElement('div', { className: "flex items-center justify-center gap-2 text-red-500 mb-4" },
+                                        React.createElement(Star, { className: "w-5 h-5" }),
+                                        React.createElement('span', { className: "text-sm font-medium" }, '晚安好夢！'),
+                                        React.createElement(Star, { className: "w-5 h-5" })
+                                    ),
+                                    React.createElement('button', {
+                                        onClick: resetForm,
+                                        className: "w-full bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white py-4 px-6 rounded-2xl font-bold text-lg transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center gap-3"
+                                    },
+                                        React.createElement(Sparkles, { className: "w-6 h-6" }),
+                                        '創作另一個故事',
+                                        React.createElement(Heart, { className: "w-6 h-6" })
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
+            }
+
+            return null;
+        };
+
+        const App = () => {
+            return React.createElement(ChineseBedtimeStoryGenerator);
+        };
+
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
