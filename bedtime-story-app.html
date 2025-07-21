@@ -56,9 +56,9 @@
             ];
 
             const storyLengths = [
-                { value: 'short', label: '短篇故事', emoji: '📖', desc: '5-8句話，適合年幼兒童', chars: '50-100字' },
-                { value: 'medium', label: '中篇故事', emoji: '📚', desc: '10-15句話，適合學齡兒童', chars: '150-250字' },
-                { value: 'long', label: '長篇故事', emoji: '📜', desc: '20-30句話，適合較大兒童', chars: '300-500字' }
+                { value: 'short', label: '短篇故事', emoji: '📖', desc: '5-8句話', chars: '50-100字' },
+                { value: 'medium', label: '中篇故事', emoji: '📚', desc: '10-15句話', chars: '150-250字' },
+                { value: 'long', label: '長篇故事', emoji: '📜', desc: '20-30句話', chars: '300-500字' }
             ];
 
             const handleInterestToggle = (interest) => {
@@ -351,9 +351,9 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON. DON'T INCLUDE LEADING BACKTICKS LI
                                 type: "number",
                                 value: formData.age,
                                 onChange: (e) => setFormData({...formData, age: e.target.value}),
-                                placeholder: "輸入年齡 (2-12)",
-                                min: "2",
-                                max: "12",
+                                placeholder: "輸入年齡 (1-6)",
+                                min: "1",
+                                max: "6",
                                 className: "w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:outline-none transition-colors text-2xl text-center font-bold",
                                 autoFocus: true
                             }),
@@ -390,8 +390,7 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON. DON'T INCLUDE LEADING BACKTICKS LI
                         React.createElement('div', { className: "space-y-4" },
                             [
                                 { value: '男孩', label: '男孩', emoji: '👦' },
-                                { value: '女孩', label: '女孩', emoji: '👧' },
-                                { value: '其他', label: '其他', emoji: '🧒' }
+                                { value: '女孩', label: '女孩', emoji: '👧' }
                             ].map((gender) =>
                                 React.createElement('button', {
                                     key: gender.value,
